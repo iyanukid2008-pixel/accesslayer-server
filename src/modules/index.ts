@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { routeBodySizeLimit } from '../middlewares/body-size-limit.middleware';
 import { queryCostGovernor } from '../middlewares/query-cost-governor.middleware';
@@ -36,6 +35,7 @@ import followerRouter from './followers/follower.routes';
 import protocolRouter from './protocol/protocol.routes';
 import revenueRouter from './revenue/revenue.routes';
 import stakerRouter from './revenue/staker-revenue.routes';
+import creatorRevenueRouter from './revenue/creator-revenue.routes';
 import vaultRouter from './staking/vault.routes';
 import portfolioRouter from './portfolio/portfolio.routes';
 import referralRouter from './referrals/referral-earnings.routes';
@@ -50,6 +50,7 @@ import holdersRouter from './dividends/holders.routes';
 import discoveryRouter from './keys/discovery.routes';
 import tradesRouter from './trades/trades.routes';
 import tradersRouter from './traders/traders.routes';
+import nonceRouter from './nonce/nonce.routes';
 import swapsRouter from './swaps/swaps.routes';
 
 import { BASE as CREATORS_BASE } from '../constants/creator.constants';
@@ -108,6 +109,7 @@ router.use('/platform', routeBodySizeLimit('default'), platformRouter);
 router.use('/search', routeBodySizeLimit('default'), searchRouter);
 router.use('/revenue', routeBodySizeLimit('default'), revenueRouter);
 router.use('/staker', routeBodySizeLimit('default'), stakerRouter);
+router.use('/', routeBodySizeLimit('default'), creatorRevenueRouter);
 router.use('/staking', routeBodySizeLimit('default'), vaultRouter);
 router.use('/portfolio', routeBodySizeLimit('default'), portfolioRouter);
 router.use('/referrals', routeBodySizeLimit('default'), referralRouter);
@@ -129,6 +131,7 @@ router.use('/holders', routeBodySizeLimit('default'), holdersRouter);
 router.use('/discovery', routeBodySizeLimit('default'), discoveryRouter);
 router.use('/trades', routeBodySizeLimit('default'), tradesRouter);
 router.use('/traders', routeBodySizeLimit('default'), tradersRouter);
+router.use('/nonce', routeBodySizeLimit('default'), nonceRouter);
 router.use('/swaps', routeBodySizeLimit('default'), swapsRouter);
 
 export default router;

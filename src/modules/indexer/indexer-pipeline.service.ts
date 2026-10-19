@@ -30,6 +30,17 @@ function isTradeEvent(event: IndexerChainEvent): boolean {
    );
 }
 
+function isGovernanceProposalEvent(event: IndexerChainEvent): boolean {
+   return (
+      event.eventType === 'PROPOSAL_CREATED' ||
+      event.eventType === 'ProposalCreated' ||
+      event.eventType === 'VOTE_CAST' ||
+      event.eventType === 'VoteCast' ||
+      event.eventType === 'PROPOSAL_EXECUTED' ||
+      event.eventType === 'ProposalExecuted'
+   );
+}
+
 export interface TradeEventProcessingOptions {
    /**
     * Advance the shared ledger cursor after processing the batch.
@@ -322,7 +333,8 @@ export async function advanceIndexerCursorForBatch(
 }
 
 /**
- * Processes a mixed batch of indexer events (trades + social metadata).
+ * Processes a mixed batch of indexer events (trades, social metadata and
+ * TWAPUpdated observations).
  *
  * Routes each event type to its handler and advances the ledger cursor
  * exactly once, over the full batch, so batches containing only social
@@ -338,6 +350,34 @@ export async function processIndexerEvents(
 
    if (socialEvents.length > 0) {
       await processSocialMetadataEvents(socialEvents);
+   }
+
+   // TWAPUpdated (#1082). Awaited before the cursor moves: if this throws,
+   // the cursor stays put and the whole batch is redelivered, which is what
+   // keeps the twap_snapshots history free of gaps.
+   // Lazy import, as for the bundle indexer, so Redis is only loaded when a
+   // TWAP event actually arrives.
+   const twapEvents = events.filter(
+      event =>
+         event.eventType === 'TWAP_UPDATED' ||
+         event.eventType === 'TWAPUpdated'
+   );
+   if (twapEvents.length > 0) {
+      const { processTwapUpdatedEvents } = await import(
+         './twap-indexer.service'
+      );
+      await processTwapUpdatedEvents(twapEvents);
+   }
+
+   // Governance lifecycle events (PROPOSAL_CREATED / VOTE_CAST /
+   // PROPOSAL_EXECUTED). Processed in order before the cursor moves so a
+   // batch that creates a proposal and records its votes stays consistent.
+   const governanceEvents = events.filter(isGovernanceProposalEvent);
+   if (governanceEvents.length > 0) {
+      const { processGovernanceProposalEvents } = await import(
+         './governance-proposal-indexer.service'
+      );
+      await processGovernanceProposalEvents(governanceEvents);
    }
 
    if (tradeEvents.length > 0) {
